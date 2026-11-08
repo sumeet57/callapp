@@ -6,8 +6,13 @@ import { CallEngine } from './lib/rtc.js';
 import { unlock } from './lib/audio.js';
 
 function explain(e) {
-  if (e?.name === 'NotAllowedError' || e?.name === 'SecurityError')
-    return 'Microphone access was denied. Allow it in site settings and try again.';
+  const detail = `(${e?.name || 'Error'}${e?.message ? ': ' + e.message : ''})`;
+  if (e?.name === 'NotAllowedError')
+    return `Microphone blocked. Check the Chrome/site mic setting and the Android app permission, then retry. ${detail}`;
+  if (e?.name === 'SecurityError')
+    return `Browser refused mic access (needs https, and the host must not block microphone). ${detail}`;
+  if (e?.name === 'NotReadableError')
+    return `Microphone is busy in another app. Close it and retry. ${detail}`;
   if (e?.name === 'NotFoundError') return 'No microphone found.';
   switch (e?.code) {
     case 'room-full':
@@ -40,16 +45,17 @@ export default function App() {
     setBusy(true);
     setError('');
     unlock(); // inside the click gesture
-    try {
-      if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
-    } catch {
-      /* ignored */
-    }
     let code = room;
     for (let attempt = 0; attempt < 4; attempt++) {
       const engine = new CallEngine();
       try {
         await engine.start({ room: code, mode, name });
+        // Ask for notifications only AFTER the mic prompt is done, so two dialogs never collide.
+        try {
+          if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+        } catch {
+          /* ignored */
+        }
         setSession({ engine, room: code, name });
         setStage('call');
         setBusy(false);
