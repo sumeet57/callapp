@@ -1,0 +1,347 @@
+:root {
+  --bg: #000;
+  --fg: #fff;
+  --dim: #8c8c8c;
+  --line: #2b2b2b;
+  --st: env(safe-area-inset-top, 0px);
+  --sb: env(safe-area-inset-bottom, 0px);
+}
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+body {
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+h1 {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0 0 6px;
+}
+h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+p {
+  margin: 0;
+}
+.dim {
+  color: var(--dim);
+}
+
+.screen {
+  min-height: 100dvh;
+  padding: calc(var(--st) + 24px) 24px calc(var(--sb) + 24px);
+  display: flex;
+  flex-direction: column;
+}
+.center {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 4px;
+}
+.stack {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+.msg {
+  min-height: 22px;
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--fg);
+}
+
+input {
+  width: 100%;
+  height: 50px;
+  padding: 0 16px;
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 16px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+input:focus {
+  border-color: var(--fg);
+}
+input::placeholder {
+  color: #5a5a5a;
+}
+input.code {
+  text-align: center;
+  letter-spacing: 0.3em;
+  font-weight: 600;
+}
+input:disabled {
+  opacity: 0.4;
+}
+
+.btn {
+  height: 50px;
+  border-radius: 999px;
+  border: 1px solid var(--fg);
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn.ghost {
+  background: transparent;
+  color: var(--fg);
+}
+.btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.link {
+  margin-top: 8px;
+  background: none;
+  border: 0;
+  color: var(--dim);
+  text-decoration: underline;
+  font-size: 14px;
+  cursor: pointer;
+}
+.or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--dim);
+  font-size: 13px;
+  margin: 4px 0;
+}
+.or::before,
+.or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* ---------- call screen ---------- */
+.call {
+  position: relative;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--st) + 14px) 20px calc(var(--sb) + 28px);
+}
+.call-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.end-corner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.room-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--fg);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  font-size: 14px;
+  cursor: pointer;
+}
+.call-mid {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 8vh;
+  overflow-y: auto;
+}
+.sub {
+  color: var(--dim);
+  font-size: 15px;
+}
+.timer {
+  font-size: 44px;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  margin: 6px 0 28px;
+}
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px 16px;
+}
+.tile {
+  width: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  text-align: center;
+}
+.tile span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.avatar.me {
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
+}
+.avatar.me.muted {
+  background: transparent;
+  color: var(--dim);
+  border-color: var(--line);
+}
+.avatar.pending {
+  opacity: 0.45;
+  border-style: dashed;
+}
+.avatar.speaking {
+  border-color: var(--fg);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25);
+}
+
+.note {
+  min-height: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--dim);
+  margin-bottom: 14px;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+}
+.ctl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--dim);
+}
+.circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 1.5px solid var(--fg);
+  background: transparent;
+  color: var(--fg);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 0.08s;
+}
+.circle:active {
+  transform: scale(0.94);
+}
+.circle.on {
+  background: var(--fg);
+  color: var(--bg);
+}
+.circle:disabled {
+  opacity: 0.35;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.88);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.sheet {
+  width: 100%;
+  max-width: 320px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+.sheet .dim {
+  margin-bottom: 8px;
+}
+.flash {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: var(--fg);
+  color: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  font-size: 22px;
+  font-weight: 600;
+  animation: blink 0.25s steps(1) 4;
+}
+@keyframes blink {
+  50% {
+    background: var(--bg);
+    color: var(--fg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flash {
+    animation: none;
+  }
+}
