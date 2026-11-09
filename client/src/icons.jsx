@@ -52,6 +52,31 @@ export const EndCall = (p) => (
     </g>
   </I>
 );
+// Push-to-talk mode icon (walkie-talkie)
+export const Walkie = (p) => (
+  <I {...p}>
+    <rect x="7" y="8" width="10" height="14" rx="2" />
+    <line x1="10" y1="2" x2="10" y2="8" />
+    <line x1="10" y1="12" x2="14" y2="12" />
+    <line x1="10" y1="15" x2="14" y2="15" />
+    <line x1="10" y1="18" x2="14" y2="18" />
+  </I>
+);
+// Continuous / open mic mode icon (live waveform)
+export const Wave = (p) => (
+  <I {...p}>
+    <path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2" />
+  </I>
+);
+export const Shuffle = (p) => (
+  <I {...p}>
+    <polyline points="16 3 21 3 21 8" />
+    <line x1="4" y1="20" x2="21" y2="3" />
+    <polyline points="21 16 21 21 16 21" />
+    <line x1="15" y1="15" x2="21" y2="21" />
+    <line x1="4" y1="4" x2="9" y2="9" />
+  </I>
+);
 export const Bell = (p) => (
   <I {...p}>
     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />

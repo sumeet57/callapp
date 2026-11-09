@@ -4,6 +4,7 @@ import Lobby, { genCode } from './Lobby.jsx';
 import Call from './Call.jsx';
 import { CallEngine } from './lib/rtc.js';
 import { unlock } from './lib/audio.js';
+import { isUnlocked } from './lib/lock.js';
 
 function explain(e) {
   const detail = `(${e?.name || 'Error'}${e?.message ? ': ' + e.message : ''})`;
@@ -26,7 +27,11 @@ function explain(e) {
 }
 
 export default function App() {
-  const [stage, setStage] = useState('gate');
+  const [stage, setStage] = useState('boot'); // boot -> gate | lobby -> call
+
+  useEffect(() => {
+    isUnlocked().then((ok) => setStage(ok ? 'lobby' : 'gate'));
+  }, []);
   const [session, setSession] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -41,7 +46,7 @@ export default function App() {
     return () => window.removeEventListener('beforeinstallprompt', h);
   }, []);
 
-  const begin = async ({ room, mode, name }) => {
+  const begin = async ({ room, mode, name, pub }) => {
     setBusy(true);
     setError('');
     unlock(); // inside the click gesture
@@ -49,7 +54,7 @@ export default function App() {
     for (let attempt = 0; attempt < 4; attempt++) {
       const engine = new CallEngine();
       try {
-        await engine.start({ room: code, mode, name });
+        await engine.start({ room: code, mode, name, pub });
         // Ask for notifications only AFTER the mic prompt is done, so two dialogs never collide.
         try {
           if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
@@ -86,6 +91,7 @@ export default function App() {
     setInstallEvt(null);
   };
 
+  if (stage === 'boot') return null;
   if (stage === 'gate') return <Gate onOk={() => setStage('lobby')} />;
   if (stage === 'call' && session)
     return <Call engine={session.engine} room={session.room} name={session.name} onEnd={onEnd} />;

@@ -1,4 +1,4 @@
-// Minimal WebRTC signaling server: Express (health) + ws (rooms, relay, pinch).
+// Minimal WebRTC signaling server: Express (health, public room list) + ws (rooms, relay, pinch).
 // No database. Rooms live in memory and vanish when the last user leaves.
 import express from 'express';
 import cors from 'cors';
@@ -11,7 +11,10 @@ const MAX_PEERS = Number(process.env.MAX_PEERS) || 10;
 const ALLOWED = (process.env.ALLOWED_ORIGINS || '*').split(',').map((s) => s.trim()).filter(Boolean);
 const ANY_ORIGIN = ALLOWED.includes('*');
 
-/** @type {Map<string, Map<string, {ws: import('ws').WebSocket, name: string, lastPinch: number}>>} */
+/**
+ * code -> { members: Map<id, {ws, name, lastPinch}>, pub: boolean, host: string, created: number }
+ * `pub`, `host` and `created` are set once, when the room is created.
+ */
 const rooms = new Map();
 
 const app = express();
@@ -21,8 +24,19 @@ app.use(cors({ origin: ANY_ORIGIN ? true : ALLOWED }));
 app.get('/', (_req, res) => res.type('text').send('p2p-call signaling server'));
 app.get('/health', (_req, res) => {
   let peers = 0;
-  rooms.forEach((m) => (peers += m.size));
+  rooms.forEach((r) => (peers += r.members.size));
   res.json({ ok: true, rooms: rooms.size, peers, uptime: Math.round(process.uptime()) });
+});
+
+// Public rooms only. Exposes the room code, the creator's display name and the head-count (no member names).
+app.get('/rooms', (_req, res) => {
+  const list = [];
+  for (const [code, r] of rooms) {
+    if (r.pub) list.push({ code, host: r.host, count: r.members.size, max: MAX_PEERS, created: r.created });
+  }
+  list.sort((a, b) => b.created - a.created);
+  res.set('Cache-Control', 'no-store');
+  res.json({ rooms: list.slice(0, 50), max: MAX_PEERS });
 });
 
 const server = http.createServer(app);
@@ -44,19 +58,19 @@ const send = (ws, obj) => {
 };
 
 function broadcast(room, exceptId, obj) {
-  const members = rooms.get(room);
-  if (!members) return;
-  for (const [id, p] of members) if (id !== exceptId) send(p.ws, obj);
+  const r = rooms.get(room);
+  if (!r) return;
+  for (const [id, p] of r.members) if (id !== exceptId) send(p.ws, obj);
 }
 
 function cleanup(ws) {
   const info = ws.peer;
   if (!info) return;
   ws.peer = null;
-  const members = rooms.get(info.room);
-  if (!members) return;
-  members.delete(info.id);
-  if (members.size === 0) rooms.delete(info.room);
+  const r = rooms.get(info.room);
+  if (!r) return;
+  r.members.delete(info.id);
+  if (r.members.size === 0) rooms.delete(info.room);
   else broadcast(info.room, info.id, { t: 'peer-left', id: info.id });
 }
 
@@ -89,18 +103,19 @@ wss.on('connection', (ws) => {
         if (ws.peer) return;
         const room = normRoom(m.room);
         if (!room) return send(ws, { t: 'error', code: 'bad-room' });
-        let members = rooms.get(room);
-        if (m.mode === 'create' && members) return send(ws, { t: 'error', code: 'exists' });
-        if (m.mode === 'join' && !members) return send(ws, { t: 'error', code: 'no-room' });
-        if (members && members.size >= MAX_PEERS) return send(ws, { t: 'error', code: 'room-full' });
-        if (!members) {
-          members = new Map();
-          rooms.set(room, members);
+        let r = rooms.get(room);
+        if (m.mode === 'create' && r) return send(ws, { t: 'error', code: 'exists' });
+        if (m.mode === 'join' && !r) return send(ws, { t: 'error', code: 'no-room' });
+        if (r && r.members.size >= MAX_PEERS) return send(ws, { t: 'error', code: 'room-full' });
+        const name = cleanName(m.name) || 'Guest';
+        if (!r) {
+          // Also reached by 'rejoin' after a server restart: the client re-sends `pub`, so the room stays listed.
+          r = { members: new Map(), pub: m.pub === true, host: name, created: Date.now() };
+          rooms.set(room, r);
         }
         const id = crypto.randomBytes(6).toString('hex');
-        const name = cleanName(m.name) || 'Guest';
-        const peers = [...members].map(([pid, p]) => ({ id: pid, name: p.name }));
-        members.set(id, { ws, name, lastPinch: 0 });
+        const peers = [...r.members].map(([pid, p]) => ({ id: pid, name: p.name }));
+        r.members.set(id, { ws, name, lastPinch: 0 });
         ws.peer = { id, room, name };
         send(ws, { t: 'joined', id, peers });
         broadcast(room, id, { t: 'peer-joined', id, name });
@@ -109,14 +124,14 @@ wss.on('connection', (ws) => {
       case 'signal': {
         const p = ws.peer;
         if (!p || typeof m.to !== 'string') return;
-        const target = rooms.get(p.room)?.get(m.to);
+        const target = rooms.get(p.room)?.members.get(m.to);
         if (target) send(target.ws, { t: 'signal', from: p.id, data: m.data });
         break;
       }
       case 'pinch': {
         const p = ws.peer;
         if (!p) return;
-        const me = rooms.get(p.room)?.get(p.id);
+        const me = rooms.get(p.room)?.members.get(p.id);
         if (!me || now - me.lastPinch < 1000) return;
         me.lastPinch = now;
         broadcast(p.room, p.id, { t: 'pinch', from: p.id, name: p.name });

@@ -17,7 +17,12 @@ body,
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
 }
 body {
   overscroll-behavior: none;
@@ -133,7 +138,7 @@ input:disabled {
 }
 .or::before,
 .or::after {
-  content: '';
+  content: "";
   flex: 1;
   height: 1px;
   background: var(--line);
@@ -231,7 +236,9 @@ input:disabled {
   place-items: center;
   font-weight: 600;
   letter-spacing: 0.04em;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .avatar.me {
   background: var(--fg);
@@ -344,4 +351,171 @@ input:disabled {
   .flash {
     animation: none;
   }
+}
+
+/* ---------- v2: lobby (name, public rooms) ---------- */
+.screen.top {
+  justify-content: flex-start;
+  align-items: center;
+  text-align: center;
+  padding-top: calc(var(--st) + 36px);
+}
+.namerow {
+  display: flex;
+  gap: 8px;
+}
+.iconbtn {
+  flex: 0 0 50px;
+  height: 50px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--fg);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.iconbtn:disabled {
+  opacity: 0.4;
+}
+.hint {
+  font-size: 12px;
+  color: var(--dim);
+  margin: -4px 0 4px;
+}
+.row {
+  display: flex;
+  gap: 8px;
+}
+.btn.sm {
+  height: 50px;
+  padding: 0 20px;
+  flex: 0 0 auto;
+}
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 36px;
+  background: none;
+  border: 0;
+  color: var(--dim);
+  font-size: 14px;
+  cursor: pointer;
+  align-self: center;
+  padding: 0;
+}
+.switch .knob {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1.5px solid var(--dim);
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.switch .knob::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--dim);
+  transition:
+    transform 0.15s,
+    background 0.15s;
+}
+.switch.on {
+  color: var(--fg);
+}
+.switch.on .knob {
+  background: var(--fg);
+  border-color: var(--fg);
+}
+.switch.on .knob::after {
+  background: var(--bg);
+  transform: translateX(18px);
+}
+.switch:disabled {
+  opacity: 0.4;
+}
+.rooms {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+.rooms .empty {
+  text-align: center;
+  color: var(--dim);
+  font-size: 14px;
+  padding: 14px 0;
+}
+.room-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.room-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.room-info b {
+  font-weight: 600;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.room-info small {
+  color: var(--dim);
+  letter-spacing: 0.18em;
+  font-size: 12px;
+}
+.count {
+  color: var(--dim);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.room-row .btn.sm {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+/* ---------- v2: 4-button call controls ---------- */
+.controls {
+  gap: 14px;
+  align-items: center;
+}
+.circle {
+  width: 62px;
+  height: 62px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.circle.big {
+  width: 88px;
+  height: 88px;
+  touch-action: none;
+}
+.ctl {
+  min-width: 62px;
+  text-align: center;
+}
+.ctl span {
+  white-space: nowrap;
 }

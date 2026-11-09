@@ -2,9 +2,19 @@
 // The NEW joiner always creates the offers, so offer collisions ("glare") cannot happen.
 import { getCtx, unlock, playPinch, watchLevel } from './audio.js';
 
-const SIGNAL_URL =
+const RAW_URL =
   import.meta.env.VITE_SIGNAL_URL ||
   `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:3001`;
+
+// Normalise: http(s):// -> ws(s)://, and on an https page upgrade ws:// to wss:// (except localhost).
+const SIGNAL_URL = (() => {
+  let u = String(RAW_URL).trim().replace(/^http/i, 'ws');
+  if (location.protocol === 'https:' && /^ws:\/\//i.test(u) && !/^ws:\/\/(localhost|127\.0\.0\.1)/i.test(u)) {
+    u = 'wss://' + u.slice(5);
+  }
+  return u;
+})();
+const badUrl = (msg) => Object.assign(new Error(msg), { code: 'bad-url' });
 
 function iceServers() {
   try {
@@ -15,6 +25,18 @@ function iceServers() {
   }
   return [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
 }
+
+// Same host as the signaling socket, over http(s): used for the public room list.
+export const HTTP_BASE = SIGNAL_URL.replace(/^ws/i, 'http').replace(/\/+$/, '');
+
+const MODE_KEY = 'rc_talk_mode';
+const loadMode = () => {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'open' ? 'open' : 'ptt'; // default: push to talk
+  } catch {
+    return 'ptt';
+  }
+};
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const EARPIECE = /ear\s?piece|receiver|handset/i;
@@ -27,7 +49,10 @@ export class CallEngine {
     this.stream = null;
     this.ws = null;
     this.myId = null;
-    this.muted = false;
+    this.talkMode = loadMode(); // 'ptt' (push to talk) | 'open' (continuous)
+    this.muted = false; // used in 'open' mode
+    this.talking = false; // used in 'ptt' mode (true only while the button is held)
+    this.pub = false;
     this.closed = false;
     this.sinkId = '';
     this.speakerOn = true;
@@ -75,10 +100,11 @@ export class CallEngine {
   }
 
   // ---------- lifecycle ----------
-  async start({ room, mode, name }) {
+  async start({ room, mode, name, pub }) {
     this.room = room;
     this.mode = mode;
     this.name = name;
+    this.pub = !!pub;
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error('Microphone needs a secure (https) connection.');
     }
@@ -86,6 +112,7 @@ export class CallEngine {
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       video: false,
     });
+    this.applyTrack(); // in push-to-talk the mic starts closed
     await this.connect();
     this.mode = 'rejoin';
     this.status = 'connected';
@@ -149,7 +176,18 @@ export class CallEngine {
     return new Promise((resolve, reject) => {
       let settled = false;
       this.dropWs();
-      const ws = new WebSocket(SIGNAL_URL);
+      const local = /^wss?:\/\/(localhost|127\.0\.0\.1)/i.test(SIGNAL_URL);
+      if (local && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+        return reject(
+          badUrl('Server address points to localhost. Set VITE_SIGNAL_URL to your deployed wss:// server and rebuild the client.')
+        );
+      }
+      let ws;
+      try {
+        ws = new WebSocket(SIGNAL_URL);
+      } catch (e) {
+        return reject(badUrl(`Server address is invalid or insecure (${SIGNAL_URL}). Use a wss:// URL in VITE_SIGNAL_URL and rebuild.`));
+      }
       this.ws = ws;
       const fail = (err) => {
         if (settled) return;
@@ -164,7 +202,7 @@ export class CallEngine {
 
       ws.onopen = () => {
         this.lastSeen = Date.now();
-        ws.send(JSON.stringify({ t: 'join', room: this.room, mode: this.mode, name: this.name }));
+        ws.send(JSON.stringify({ t: 'join', room: this.room, mode: this.mode, name: this.name, pub: this.pub }));
       };
       ws.onmessage = (e) => {
         let m;
@@ -390,15 +428,49 @@ export class CallEngine {
   }
 
   // ---------- controls ----------
-  setMuted(m) {
-    this.muted = m;
-    this.stream?.getAudioTracks().forEach((t) => (t.enabled = !m));
+  // Is the mic actually transmitting right now?
+  isLive() {
+    return this.talkMode === 'open' ? !this.muted : this.talking;
+  }
+
+  micState() {
+    return { mode: this.talkMode, muted: this.muted, talking: this.talking, live: this.isLive() };
+  }
+
+  applyTrack() {
+    const live = this.isLive();
+    this.stream?.getAudioTracks().forEach((t) => (t.enabled = live));
     try {
-      navigator.mediaSession?.setMicrophoneActive?.(!m);
+      navigator.mediaSession?.setMicrophoneActive?.(live);
     } catch {
       /* ignored */
     }
-    this.emit('muted', m);
+    this.emit('mic', this.micState());
+  }
+
+  setTalkMode(mode) {
+    mode = mode === 'open' ? 'open' : 'ptt';
+    this.talkMode = mode;
+    this.talking = false;
+    this.muted = false; // entering open mic = live; entering PTT = closed (talking is false)
+    try {
+      localStorage.setItem(MODE_KEY, mode);
+    } catch {
+      /* ignored */
+    }
+    this.applyTrack();
+  }
+
+  setMuted(m) {
+    if (this.talkMode !== 'open') return;
+    this.muted = !!m;
+    this.applyTrack();
+  }
+
+  setTalking(t) {
+    if (this.talkMode !== 'ptt' || this.talking === !!t) return;
+    this.talking = !!t;
+    this.applyTrack();
   }
 
   pinch() {
@@ -507,7 +579,10 @@ export class CallEngine {
       /* unsupported */
     }
     try {
-      ms.setActionHandler('togglemicrophone', () => this.setMuted(!this.muted));
+      // Lets people talk from the notification while the app is in the background (where a held button is impossible).
+      ms.setActionHandler('togglemicrophone', () =>
+        this.talkMode === 'open' ? this.setMuted(!this.muted) : this.setTalking(!this.talking)
+      );
     } catch {
       /* unsupported */
     }

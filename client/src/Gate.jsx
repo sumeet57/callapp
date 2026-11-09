@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { lockLeft, triesLeft, registerFail, resetFails, safeEqual } from './lib/lock.js';
+import { lockLeft, triesLeft, registerFail, resetFails, safeEqual, markUnlocked } from './lib/lock.js';
 
 const PASS = import.meta.env.VITE_APP_PASSWORD || '';
 
@@ -27,11 +27,12 @@ export default function Gate({ onOk }) {
     );
   }
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     if (lockLeft() > 0) return;
     if (safeEqual(value, PASS)) {
       resetFails();
+      await markUnlocked();
       onOk();
       return;
     }

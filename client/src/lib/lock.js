@@ -32,6 +32,41 @@ export function registerFail() {
 
 export const resetFails = () => save({ fails: 0, until: 0 });
 
+// ---- "remember me": once unlocked, skip the gate on this device ----
+// Stores a hash of the current password, so changing VITE_APP_PASSWORD and redeploying
+// automatically locks everyone out again.
+const OK_KEY = 'rc_unlocked_v1';
+const PASS = import.meta.env.VITE_APP_PASSWORD || '';
+
+async function digest(s) {
+  try {
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('rc:' + s));
+    return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+  } catch {
+    let h = 5381;
+    for (const c of 'rc:' + s) h = ((h << 5) + h + c.charCodeAt(0)) | 0;
+    return 'x' + h;
+  }
+}
+
+export async function markUnlocked() {
+  try {
+    localStorage.setItem(OK_KEY, await digest(PASS));
+  } catch {
+    /* ignored */
+  }
+}
+
+export async function isUnlocked() {
+  if (!PASS) return false;
+  try {
+    const v = localStorage.getItem(OK_KEY);
+    return !!v && v === (await digest(PASS));
+  } catch {
+    return false;
+  }
+}
+
 // Constant-time-ish string compare.
 export function safeEqual(a, b) {
   let d = a.length ^ b.length;
