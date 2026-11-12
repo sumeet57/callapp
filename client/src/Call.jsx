@@ -11,6 +11,101 @@ import {
   Wave,
 } from "./icons.jsx";
 
+/* Self-contained, responsive styles for the call screen (no changes to styles.css needed).
+   Every class is prefixed "cl-" so nothing clashes with the rest of the app. */
+const CSS = `
+.cl{
+  --fg:#fff; --bg:#000; --dim:#8c8c8c; --line:#2b2b2b; --gap:clamp(8px,2.4vw,14px);
+  height:100vh; height:100dvh; width:100%; max-width:560px; margin:0 auto;
+  display:grid; grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto minmax(0,1fr) auto auto;
+  grid-template-areas:"top" "mid" "note" "dock";
+  padding:calc(env(safe-area-inset-top,0px) + 10px) clamp(12px,4vw,20px) calc(env(safe-area-inset-bottom,0px) + 12px);
+  overflow:hidden; position:relative; color:var(--fg); background:var(--bg);
+}
+.cl button{font-family:inherit}
+
+/* top bar */
+.cl-top{grid-area:top; display:flex; justify-content:space-between; align-items:center; gap:8px}
+.cl-end{width:44px;height:44px;flex:0 0 auto;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--dim);display:grid;place-items:center;cursor:pointer}
+.cl-chip{display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--fg);font-weight:600;letter-spacing:.18em;font-size:14px;cursor:pointer;min-width:0}
+
+/* middle: status + people */
+.cl-mid{grid-area:mid; min-height:0; overflow-y:auto; display:flex; flex-direction:column; align-items:center; padding-top:clamp(2px,4dvh,40px); -webkit-overflow-scrolling:touch}
+.cl-sub{margin:0;color:var(--dim);font-size:clamp(13px,3.8vw,15px);text-align:center}
+.cl-timer{margin:4px 0 clamp(8px,2.6dvh,24px);font-size:clamp(30px,10vw,44px);font-weight:300;font-variant-numeric:tabular-nums;line-height:1.1}
+.cl-grid{list-style:none;margin:0;padding:0 0 6px;width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:14px 8px}
+.cl-tile{width:clamp(62px,19vw,84px);display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;text-align:center}
+.cl-tile span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cl .avatar{width:clamp(44px,13.5vw,64px);height:clamp(44px,13.5vw,64px);font-size:clamp(13px,3.8vw,16px)}
+
+.cl-note{grid-area:note;min-height:18px;margin:6px 0;text-align:center;font-size:13px;color:var(--dim)}
+
+/* bottom dock */
+.cl-dock{grid-area:dock; display:flex; flex-direction:column; gap:var(--gap); min-width:0}
+.cl-row{display:flex; gap:var(--gap); min-width:0}
+
+.cl-sec{
+  flex:1 1 0; min-width:0; height:clamp(46px,7.5dvh,56px);
+  display:flex; align-items:center; justify-content:center; gap:8px; padding:0 10px;
+  border:1.5px solid var(--line); border-radius:14px; background:transparent; color:var(--fg);
+  font-size:clamp(12px,3.5vw,14px); font-weight:600; cursor:pointer;
+}
+.cl-sec span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cl-sec svg{width:20px;height:20px;flex:0 0 auto}
+.cl-sec:disabled{opacity:.35}
+.cl-sec:active{background:#161616}
+
+/* the two big buttons: hold-to-talk (or mute) and speaker */
+.cl-big{
+  min-width:0; height:clamp(104px,24dvh,200px);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(6px,1.4dvh,10px);
+  border:2px solid var(--fg); border-radius:22px; background:transparent; color:var(--fg);
+  font-size:clamp(12px,3.8vw,16px); font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  cursor:pointer; touch-action:none; user-select:none; -webkit-user-select:none;
+  -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent;
+  transition:background .1s,color .1s,transform .08s;
+}
+.cl-big svg{width:clamp(30px,9vw,44px);height:auto}
+.cl-talk{flex:1.7 1 0}
+.cl-spk{flex:1 1 0}
+.cl-big.on{background:var(--fg);color:var(--bg);transform:scale(.985)}
+.cl-big:active{transform:scale(.97)}
+/* white fill is reserved for "talking" / "muted"; loudspeaker-on is a subtle tint so the two never look alike */
+.cl-spk.on{background:#1c1c1c;color:var(--fg);transform:none}
+
+/* short phones (e.g. 320x568, small browsers with toolbars) */
+@media (max-height:620px){
+  .cl-mid{padding-top:0}
+  .cl-timer{margin-bottom:6px}
+  .cl-big{height:clamp(88px,21dvh,130px)}
+  .cl-sec{height:44px}
+}
+
+/* phones in landscape: info on the left, controls on the right */
+@media (orientation:landscape) and (max-height:520px){
+  .cl{
+    max-width:none;
+    grid-template-columns:minmax(0,1fr) minmax(250px,48%);
+    grid-template-rows:auto minmax(0,1fr) auto;
+    grid-template-areas:"top dock" "mid dock" "note dock";
+    column-gap:18px;
+    padding-left:calc(env(safe-area-inset-left,0px) + 16px);
+    padding-right:calc(env(safe-area-inset-right,0px) + 16px);
+  }
+  .cl-dock{align-self:center}
+  .cl-big{height:clamp(84px,34dvh,150px)}
+  .cl-timer{font-size:28px;margin-bottom:6px}
+}
+
+/* tablets / desktop */
+@media (min-width:700px) and (orientation:portrait){
+  .cl-big{height:clamp(150px,22dvh,220px)}
+}
+
+@media (prefers-reduced-motion:reduce){.cl-big{transition:none}}
+`;
+
 const fmt = (s) =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 // "Calm Fox" -> "CF", "Alex" -> "AL"
@@ -195,17 +290,19 @@ export default function Call({ engine, room, name, onEnd }) {
         : `${peers.length + 1} in call`;
 
   return (
-    <main className="call">
-      <header className="call-top">
+    <main className="cl">
+      <style>{CSS}</style>
+
+      <header className="cl-top">
         <button
-          className="end-corner"
+          className="cl-end"
           onClick={() => setConfirm(true)}
           aria-label="End call"
         >
           <EndCall size={18} />
         </button>
         <button
-          className="room-chip"
+          className="cl-chip"
           onClick={onShare}
           aria-label="Share room link"
         >
@@ -214,12 +311,12 @@ export default function Call({ engine, room, name, onEnd }) {
         </button>
       </header>
 
-      <section className="call-mid">
-        <p className="sub">{sub}</p>
-        <p className="timer">{fmt(secs)}</p>
+      <section className="cl-mid">
+        <p className="cl-sub">{sub}</p>
+        <p className="cl-timer">{fmt(secs)}</p>
 
-        <ul className="grid">
-          <li className="tile">
+        <ul className="cl-grid">
+          <li className="cl-tile">
             <div
               className={`avatar me${mic.live ? "" : " muted"}${ptt && mic.talking ? " speaking" : ""}`}
             >
@@ -228,7 +325,7 @@ export default function Call({ engine, room, name, onEnd }) {
             <span>{mic.live ? "You" : "You · mic off"}</span>
           </li>
           {peers.map((p) => (
-            <li className="tile" key={p.id}>
+            <li className="cl-tile" key={p.id}>
               <div
                 className={`avatar${p.speaking ? " speaking" : ""}${p.state !== "connected" ? " pending" : ""}`}
               >
@@ -240,26 +337,38 @@ export default function Call({ engine, room, name, onEnd }) {
         </ul>
       </section>
 
-      <p className="note" role="status">
+      <p className="cl-note" role="status">
         {note}
       </p>
 
-      <footer className="controls">
-        <div className="ctl">
+      <footer className="cl-dock">
+        {/* secondary row: mode + pinch */}
+        <div className="cl-row">
           <button
-            className="circle"
+            className="cl-sec"
             onClick={onMode}
             aria-label={ptt ? "Mode: push to talk" : "Mode: open mic"}
           >
             {ptt ? <Walkie /> : <Wave />}
+            <span>{ptt ? "Push to talk" : "Open mic"}</span>
           </button>
-          <span>{ptt ? "Push to talk" : "Open mic"}</span>
+          <button
+            className="cl-sec"
+            onClick={onPinch}
+            disabled={cool}
+            aria-label="Pinch"
+          >
+            <Bell />
+            <span>Pinch</span>
+          </button>
         </div>
 
-        <div className="ctl">
+        {/* primary row: big talk (or mute) + big speaker */}
+        <div className="cl-row">
           {ptt ? (
             <button
-              className={`circle big${mic.talking ? " on" : ""}`}
+              key="talk"
+              className={`cl-big cl-talk${mic.talking ? " on" : ""}`}
               onPointerDown={talkDown}
               onPointerUp={talkUp}
               onPointerCancel={talkUp}
@@ -270,51 +379,31 @@ export default function Call({ engine, room, name, onEnd }) {
               aria-label="Hold to talk"
               aria-pressed={mic.talking}
             >
-              <Mic size={34} />
+              <Mic />
+              <span>{mic.talking ? "Talking…" : "Hold to talk"}</span>
             </button>
           ) : (
             <button
-              className={`circle big${mic.muted ? " on" : ""}`}
+              key="mute"
+              className={`cl-big cl-talk${mic.muted ? " on" : ""}`}
               onClick={() => engine.setMuted(!mic.muted)}
               aria-pressed={mic.muted}
               aria-label="Mute"
             >
-              {mic.muted ? <MicOff size={34} /> : <Mic size={34} />}
+              {mic.muted ? <MicOff /> : <Mic />}
+              <span>{mic.muted ? "Unmute" : "Mute"}</span>
             </button>
           )}
-          <span>
-            {ptt
-              ? mic.talking
-                ? "Talking…"
-                : "Hold to talk"
-              : mic.muted
-                ? "Unmute"
-                : "Mute"}
-          </span>
-        </div>
 
-        <div className="ctl">
           <button
-            className={`circle${speaker ? " on" : ""}`}
+            className={`cl-big cl-spk${speaker ? " on" : ""}`}
             onClick={onSpeaker}
             aria-pressed={speaker}
             aria-label="Speaker"
           >
             {speaker ? <Speaker /> : <Handset />}
+            <span>{speaker ? "Speaker" : "Phone"}</span>
           </button>
-          <span>{speaker ? "Speaker" : "Phone"}</span>
-        </div>
-
-        <div className="ctl">
-          <button
-            className="circle"
-            onClick={onPinch}
-            disabled={cool}
-            aria-label="Pinch"
-          >
-            <Bell />
-          </button>
-          <span>Pinch</span>
         </div>
       </footer>
 
